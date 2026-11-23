@@ -57,6 +57,7 @@ pub mod setup;
 pub mod smart;
 pub mod sse;
 pub mod static_object;
+pub mod static_publish;
 pub mod stream;
 pub mod telemetry;
 pub mod tls;

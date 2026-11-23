@@ -1130,6 +1130,11 @@ async fn receive_pack_process(
 
     // Writer-side peel: replicas advertise annotated tags without objects.
     local.fill_peeled(&mut txn);
+    let pushed_refs: Vec<(String, String)> = txn
+        .updates
+        .iter()
+        .map(|u| (u.name.clone(), u.new_oid.clone()))
+        .collect();
     let meta = push_meta(&caps, principal, &txn, &request_id);
     let pack_ref = match ingest {
         Ok(Some(p)) => Some(p),
@@ -1162,7 +1167,22 @@ async fn receive_pack_process(
     let per_ref = per_ref_policy;
     tracing::info!(seq, refs = per_ref.len(), "receive-pack published");
 
-    let report = build_report(&caps, unpack_result, &per_ref).await;
+    let static_note = crate::static_publish::maybe_publish_after_push(
+        local.path(),
+        route_id.owner(),
+        route_id.name(),
+        &pushed_refs,
+        &per_ref,
+    )
+    .await;
+
+    let mut report = Vec::new();
+    if let Some(msg) = static_note
+        && caps.side_band_64k
+    {
+        report.extend_from_slice(&sideband_pkt(2, &format!("* {msg}\n")));
+    }
+    report.extend(build_report(&caps, unpack_result, &per_ref).await);
     Ok(report)
 }
 
