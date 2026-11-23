@@ -638,6 +638,7 @@ impl LocalRepo {
             ("uploadpack.allowAnySHA1InWant", "true"),
             ("uploadpack.allowSidebandAll", "true"),
             ("pack.writeReverseIndex", "true"),
+            ("pack.allowPackReuse", "single"),
         ] {
             let _ = std::process::Command::new("git")
                 .arg("-C")
@@ -2646,9 +2647,13 @@ impl LocalRepo {
             // sideband-all: the server advertises it so it can narrate before
             // the packfile section; upload-pack only honours the client's
             // request with this config (also set at init, -c covers old copies).
+            // pack.allowPackReuse=single: avoids Git 2.47's multi-pack bitmap
+            // reuse bug that can omit tree objects across multiple packs.
             .args([
                 "-c",
                 "uploadpack.allowSidebandAll=true",
+                "-c",
+                "pack.allowPackReuse=single",
                 "upload-pack",
                 "--stateless-rpc",
                 ".",
